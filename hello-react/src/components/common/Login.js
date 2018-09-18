@@ -1,25 +1,32 @@
 import React, { Component } from 'react';
+import axios from 'axios';
 import '../../style/login.less';
 import { Form, Icon, Input, Button, Checkbox, message, Spin } from 'antd';
 const FormItem = Form.Item;
 
-const login = [{
-    username:'admin',
-    password:'admin'
-},{
-    username:'zysoft',
-    password:'zysoft'
-}];
 
-function PatchUser(values) {  //匹配用户
-    const results = login.map(function(item){
-        if(values.username === item.username && values.password === item.password){
-            return 1;
-        }else{
-            return 0;
-        }
-    });
-    return results.includes(1);
+async function PatchUser(values) {  //匹配用户
+    let state = await
+                axios({
+                    method: 'post',
+                    url: 'http://localhost/quickstart/login',
+                    data: {
+                        username: values.username,
+                        password: values.password
+                    }
+                }).then(function (response) {
+                    let code = response.data.code;
+                    console.log('code is :::', code)
+                    if (code == 1) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }).catch(function (error) {
+                    console.log(error);
+                    return false;
+                });
+    return state
 };
 
 class NormalLoginForm extends Component {
@@ -31,21 +38,23 @@ class NormalLoginForm extends Component {
         this.props.form.validateFields((err, values) => {
             if (!err) {
                 console.log('Received values of form: ', values);
-                if(PatchUser(values)){
-                    this.setState({
-                        isLoding: true,
-                    });
+                PatchUser(values).then( (res) => {
+                    console.log('res:::', res)
+                    if(res){
+                        this.setState({
+                            isLoding: true,
+                        });
+                        localStorage.setItem('mspa_user',JSON.stringify(values));
+                        message.success('login successed!'); //成功信息
+                        let that = this;
+                        setTimeout(function() { //延迟进入
+                            that.props.history.push({pathname:'/home',state:values});
+                        }, 2000);
 
-                    localStorage.setItem('mspa_user',JSON.stringify(values));
-                    message.success('login successed!'); //成功信息
-                    let that = this;
-                    setTimeout(function() { //延迟进入
-                        that.props.history.push({pathname:'/home',state:values});
-                    }, 2000);
-
-                }else{
-                    message.error('login failed!'); //失败信息
-                }
+                    }else{
+                        message.error('login failed!'); //失败信息
+                    }
+                })
             }
         });
     };
